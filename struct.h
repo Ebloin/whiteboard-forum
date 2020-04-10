@@ -3,6 +3,7 @@
 #include <string.h>
 #define NUM_TOPIC 256
 #define NUM_USERS 256
+#define NUM_MESSAGES 256
 #define BUF_SIZE 1024
 
 typedef struct User user;
@@ -81,8 +82,44 @@ int authenticate(user* lu, char* username, char* password) {
 	return 0;
 }
 
+int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_index) {
+	message* ml = w->topics[topic_index].messages;
+	message* current;
+	int i;
+	for (i=0; i<NUM_MESSAGES; i++) {
+		if (i == NUM_MESSAGES) {
+			return -1;
+		}
+		current = &ml[i];
+		if (strcmp(current->text, "") == 0) {
+			break;
+		}
+	}
+	strcpy(current->text, text);
+	current->sender = user_index;
+	return 0;
+}
+
 int addUser(whiteboard* w, char* username, char* password) {
 	return 0;
+}
+
+void list_messages_from_topic(whiteboard* w, char* buf, int topic_index) {
+	message* ml = w->topics[topic_index].messages;
+	sprintf(buf, "Lista dei messaggi presenti sul topic [%d]%s:\n", topic_index, w->topics[topic_index].name);
+	message* current;
+	char tmp[BUF_SIZE]={0};
+	int i;
+	for (i=0; i<NUM_MESSAGES; i++) {
+		if (i == NUM_MESSAGES) {
+			return;
+		}
+		current = &ml[i];
+		if (strcmp(current->text, "") != 0) {
+			sprintf(tmp, "%d)%s", i, current->text);
+			strcat(buf, tmp);
+		}
+	}
 }
 /*
 int main() {

@@ -1,7 +1,9 @@
-  all: server.c,client.c
- 	  gcc -g -Wall -o server server.c
- 	  gcc -g -Wall -o client client.c
+CC = gcc
+CFLAGS = -g
 
-  clean: 
-	  $(RM) server
-	  $(RM) client
+project: 
+	$(CC) $(CFLAGS) server.c -o server
+	$(CC) $(CFLAGS) client.c -o client
+
+clean:
+	rm server; rm client;

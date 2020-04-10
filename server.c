@@ -81,6 +81,10 @@ int main(int argc, char const *argv[]) {
 				read( new_socket , buffer, 1024);
 				printf("\033[1;33m[S <-- %d] CLIENT:\033[0m %s", PID,buffer );
 
+				//TODO
+				int cur_user_index = 0; //Insert login function
+				//END TODO
+
 				//test shared-memory
 				/*
 				whiteboard* w = (whiteboard*) shmat(shmid,(void*)0,0);
@@ -143,6 +147,8 @@ int main(int argc, char const *argv[]) {
 							fflush(stdout);
 							memset(buffer, 0, sizeof(buffer));		
 							read( new_socket , buffer, 1024);
+							int topicindex;
+							topicindex = atoi(buffer);
 							printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Topic selected to add message -> %s", PID,buffer );
 							fflush(stdout);
 							send(new_socket , ACK , 1024, 0);
@@ -154,8 +160,7 @@ int main(int argc, char const *argv[]) {
 							read( new_socket , buffer, 1024);
 							printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Message to post sent from client -> %s", PID,buffer );
 							fflush(stdout);
-							//TODO
-
+							add_message_to_topic(w,buffer, cur_user_index, topicindex);
 							send(new_socket , ADDM_MESSAGE_POSTED , 1024, 0); 
 							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDM_MESSAGE_POSTED);
 							fflush(stdout);
