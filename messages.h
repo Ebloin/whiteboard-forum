@@ -22,6 +22,9 @@ char *NOT_IMPLEMENTED = "Il comando corrente non è ancora stato implementato, s
 char *ADDM_SELECT_TOPIC = "Inserire l'indice relativo al topic su cui aggiungere il messaggio: ";
 char *ADDM_MESSAGE_TEXT = "Inserisci il testo del messaggio da aggiungere: ";
 char *ADDM_MESSAGE_POSTED = "Messaggio aggiunto correttamente\n";
+
+//List messsages
+char *LTOP_SELECT_TOPIC = "Inserire l'ndice del topic di cui visualizzare i messaggi:";
 /*
 [0;31m	Red
 [1;31m	Bold Red

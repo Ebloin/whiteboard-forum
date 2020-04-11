@@ -166,6 +166,21 @@ int main(int argc, char const *argv[]) {
 							fflush(stdout);
 							break;
 
+						case LIST_TOPIC_MESSAGES:
+							send(new_socket , ACK , 1024, 0);
+							send(new_socket , LTOP_SELECT_TOPIC , 1024, 0);
+							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s\n", PID, LTOP_SELECT_TOPIC);
+							fflush(stdout);
+							memset(buffer, 0, sizeof(buffer));
+							read( new_socket , buffer, 1024);
+							topicindex = atoi(buffer);
+							memset(buf, 0, sizeof(buf));
+							list_messages_from_topic(w, buf, topicindex);
+							send(new_socket , buf , 1024, 0); 
+							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, "Messaggi del topic listati\n");
+							fflush(stdout);
+							break;
+
 						default:
 							send(new_socket , UNKNOWN , 1024, 0); 
 							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, UNKNOWN);

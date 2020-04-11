@@ -106,7 +106,7 @@ int addUser(whiteboard* w, char* username, char* password) {
 
 void list_messages_from_topic(whiteboard* w, char* buf, int topic_index) {
 	message* ml = w->topics[topic_index].messages;
-	sprintf(buf, "Lista dei messaggi presenti sul topic [%d]%s:\n", topic_index, w->topics[topic_index].name);
+	sprintf(buf, "Lista dei messaggi presenti sul topic [%d]%s", topic_index, w->topics[topic_index].name);
 	message* current;
 	char tmp[BUF_SIZE]={0};
 	int i;
