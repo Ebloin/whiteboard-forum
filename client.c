@@ -35,11 +35,11 @@ int main(int argc, char const *argv[])
 		printf("\nConnection Failed \n"); 
 		return -1; 
 	}
-
+/*
 	read( sock , buffer, 1024); 
 	printf("%s",buffer);
 	send(sock, "banner ricevuto\n", strlen("banner ricevuto\n"), 0);
-
+*/
 	while (1) {
 		//printf("Send something to the server: ");
 		memset(buffer, 0, sizeof(buffer));

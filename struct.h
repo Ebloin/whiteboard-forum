@@ -11,19 +11,22 @@ struct User {
 	char username[64];
 	char password[64];
 	int topic_subscriptions[NUM_TOPIC];
+	int sent_messages[NUM_MESSAGES];
 };
 
 typedef struct Message message;
 struct Message {
 	char text[1024];
 	int sender; //In realtà è un intero contestualizzato alla shd_mem
+	int in_reply_to;
+	int replies[NUM_MESSAGES];
 };
 
 typedef struct Topic topic;
 struct Topic {
 	char name[64];
 	message messages[256];
-
+	int owner;
 };
 
 typedef struct Whiteboard whiteboard;
@@ -32,7 +35,7 @@ struct Whiteboard {
 	topic topics[NUM_TOPIC];
 };
 
-int add_topic(topic* tl, char* name) {
+static int add_topic(topic* tl, char* name) {
 	int i =0;
 	topic* current;
 	for (i; i<NUM_TOPIC; i++) {
@@ -49,7 +52,7 @@ int add_topic(topic* tl, char* name) {
 	return i;
 }
 
-void list_topics(topic* tl, char* buf) {
+static void list_topics(topic* tl, char* buf) {
 	strcpy(buf, "Lista dei topic presenti nella whiteboard:\n");
 	char tmp[BUF_SIZE]={0};
 	int i=0;
@@ -68,7 +71,7 @@ void list_topics(topic* tl, char* buf) {
 	}
 }
 
-int authenticate(user* lu, char* username, char* password) {
+static int authenticate(user* lu, char* username, char* password) {
 	user* current;
 	int i;
 	for (i=0; i<NUM_USERS; i++) {
@@ -82,7 +85,7 @@ int authenticate(user* lu, char* username, char* password) {
 	return 0;
 }
 
-int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_index) {
+static int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_index) {
 	message* ml = w->topics[topic_index].messages;
 	message* current;
 	int i;
@@ -100,11 +103,7 @@ int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_in
 	return 0;
 }
 
-int addUser(whiteboard* w, char* username, char* password) {
-	return 0;
-}
-
-void list_messages_from_topic(whiteboard* w, char* buf, int topic_index) {
+static void list_messages_from_topic(whiteboard* w, char* buf, int topic_index) {
 	message* ml = w->topics[topic_index].messages;
 	sprintf(buf, "Lista dei messaggi presenti sul topic [%d]%s", topic_index, w->topics[topic_index].name);
 	message* current;
@@ -121,6 +120,62 @@ void list_messages_from_topic(whiteboard* w, char* buf, int topic_index) {
 		}
 	}
 }
+
+static int create_user(user* ul, char* username, char* password) {
+	int i=0;
+	user* current;
+	for (i; i<NUM_USERS; i++) {
+		if (i == NUM_USERS) {
+			printf("Users limit reached\n");
+			return -1;
+		}
+		current = &ul[i];
+		if (strcmp(current->username, username) == 0) {
+			//TODO differenziazione errori
+			return -1;
+		}
+		if (strcmp(current->username, "") == 0) {
+			break;
+		}
+	}
+	strcpy(current->username, username);
+	strcpy(current->password, password);
+	//printf("user: %s, pass:%s\n", current->username, current->password);
+	return i;
+}
+
+static void list_users(user* ul, char* buf) {
+	strcpy(buf, "Lista degli utenti presenti nella whiteboard:\n");
+	char tmp[BUF_SIZE]={0};
+	int i=0;
+	user* current;
+	for (i; i<NUM_USERS; i++) {
+		//TODO
+		//DECIDI SE SCORRERLA TUTTA O FERMARTI AL PRIMO NULL
+		if (i == NUM_USERS) {
+			return;
+		}
+		current = &ul[i];
+		if (strcmp(current->username, "")!=0) {
+			sprintf(tmp, "%d)%s", i, current->username);
+			strcat(buf, tmp);
+		}	
+	}
+}
+
+static int login(user* ul, char* username, char* password) {
+	char tmp[BUF_SIZE]={0};
+	int i=0;
+	user* current;
+	for (i; i<NUM_USERS; i++) {
+		current = &ul[i];
+		if (strcmp(current->username, username)!=0 && strcmp(current->password, password)!=0) {
+			return i;
+		}	
+	}
+	return 0;
+}
+
 /*
 int main() {
 	//printf("Prevista: %ld	Ottenuta:%ld	Test:%ld\n", WHITEBOARD_SIZE, size, TOPICS_LIST_SIZE+USERS_LIST_SIZE);

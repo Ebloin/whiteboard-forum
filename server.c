@@ -52,6 +52,8 @@ int main(int argc, char const *argv[]) {
 	whiteboard* w = (whiteboard*) shmat(shmid,(void*)0,0);
 	//setto a 0 la memoria
 	memset(w,0,sizeof(whiteboard));
+	//Creo l'utente admin
+	create_user(w->users, "admin\n", "admin\n");
 	shmdt(w);
 
     //listening loop
@@ -76,15 +78,40 @@ int main(int argc, char const *argv[]) {
 				//Apro la shm
 				whiteboard* w = (whiteboard*) shmat(shmid,(void*)0,0);
 				int AUTH = 0;
-				send(new_socket , BANNER , strlen(BANNER) , 0 );
-				printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, "Banner sent to client\n");
-				read( new_socket , buffer, 1024);
-				printf("\033[1;33m[S <-- %d] CLIENT:\033[0m %s", PID,buffer );
 
 				//TODO
 				int cur_user_index = 0; //Insert login function
+				while (!AUTH) {
+					char username[1024] = {0};
+					char password[1024] = {0};
+					send(new_socket , LOGIN_REQUSR , 1024, 0); 
+					printf("\033[1;32m[S --> %d] SERVER:\033[0m %s\n", PID, LOGIN_REQUSR);
+					memset(username, 0, sizeof(username));		
+					read( new_socket , username, 1024);
+					printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Username for login received -> %s", PID,username);
+					fflush(stdout);
+					send(new_socket , ACK , 1024, 0);
+					send(new_socket , LOGIN_REQPASS , 1024, 0); 
+					printf("\033[1;32m[S --> %d] SERVER:\033[0m %s\n", PID, LOGIN_REQPASS);
+					memset(password, 0, sizeof(password));		
+					read( new_socket , password, 1024);
+					printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Password for login received -> %s", PID,password);
+					AUTH = login(w->users, username, password);
+					if (AUTH == 0) {
+						send(new_socket , LOGIN_FAILED , strlen(LOGIN_FAILED) , 0 );
+						printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, "Login non effettuato\n");
+					}
+				}
+
+				send(new_socket , LOGIN_SUCC , strlen(LOGIN_SUCC) , 0 );
+				printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, "Login effettuato\n");
+				
 				//END TODO
 
+				//Login effettuato, mando banner
+				send(new_socket , BANNER , strlen(BANNER) , 0 );
+				printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, "Banner sent to client\n");
+				printf("\033[1;33m[S <-- %d] CLIENT:\033[0m %s", PID,buffer );
 				//test shared-memory
 				/*
 				whiteboard* w = (whiteboard*) shmat(shmid,(void*)0,0);
@@ -178,6 +205,42 @@ int main(int argc, char const *argv[]) {
 							list_messages_from_topic(w, buf, topicindex);
 							send(new_socket , buf , 1024, 0); 
 							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, "Messaggi del topic listati\n");
+							fflush(stdout);
+							break;
+						
+						case ADD_USER:
+							//Send ack and send new istructions
+							//get username
+							send(new_socket , ACK , 1024, 0);
+							char username[1024] = {0};
+							char password[1024] = {0};
+							send(new_socket , ADDU_INSUSR , 1024, 0); 
+							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s\n", PID, ADDU_INSUSR);
+							fflush(stdout);
+							read( new_socket , username, 1024);
+							printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Username to add received -> %s", PID,buffer );
+							//get password
+							send(new_socket , ACK , 1024, 0);
+							send(new_socket , ADDU_INSPWD , 1024, 0); 
+							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s\n", PID, ADDU_INSPWD);
+							fflush(stdout);
+							read( new_socket , password, 1024);
+							printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Password to add received -> %s", PID,buffer );
+							fflush(stdout);
+							int res;
+							res = create_user(w->users, username, password);
+							if (res == -1) printf("Errore in creazione\n");
+							//list_topics(w->topics);
+							send(new_socket , ADDU_SUCC , 1024, 0); 
+							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDU_SUCC);
+							fflush(stdout);
+							break;
+						
+						case LIST_USERS:
+							memset(buf, 0, sizeof(buf));
+							list_users(w->users, buf);
+							send(new_socket , buf , 1024, 0); 
+							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, "Lista dei utenti inviata\n");
 							fflush(stdout);
 							break;
 

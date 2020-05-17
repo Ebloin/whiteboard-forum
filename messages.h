@@ -4,6 +4,8 @@
 #define ADD_TOPIC 3
 #define MESSAGE_STATUS 4
 #define QUIT 5
+#define ADD_USER 6
+#define LIST_USERS 7
 
 char *BANNER = "\033[1;34m __      __.__    .__  __        ___.                  __    \n/  \\    /  \\  |__ |__|/  |_  ____\\_ |__   ____   ____ |  | __\n\\   \\/\\/   /  |  \\|  \\   __\\/ __ \\| __ \\ /  _ \\ /  _ \\|  |/ /\n \\        /|   Y  \\  ||  | \\  ___/| \\_\\ (  <_> |  <_> )    < \n  \\__/\\  / |___|  /__||__|  \\___  >___  /\\____/ \\____/|__|_ \\\n       \\/       \\/              \\/    \\/                   \\/\n\n\033[0m";
 char *COMMANDS_LIST = "\033[1;32m\nCommands:\n0)List topics\n1)List messages in a topic\n2)Add Message to topic\n3)Create topic\n4)Show the status of a message you sent\n5)Quit\n\nENTER COMMAND: \033[0m";
@@ -25,6 +27,19 @@ char *ADDM_MESSAGE_POSTED = "Messaggio aggiunto correttamente\n";
 
 //List messsages
 char *LTOP_SELECT_TOPIC = "Inserire l'ndice del topic di cui visualizzare i messaggi:";
+
+//Manage users
+char* ADDU_INSUSR = "Inserisci l'username da aggiungere: ";
+char* ADDU_INSPWD = "Inserisci la password da aggiungere: ";
+char* ADDU_SUCC = "Utente creato correttamente\n";
+
+//Login
+char* LOGIN_REQUSR = "Inserire USERNAME: ";
+char* LOGIN_REQPASS = "Inserire PASSWORD: ";
+char* LOGIN_SUCC = "Login effettuato correttamente\n";
+char* LOGIN_FAILED = "Login fallito, username o password non corrette\n";
+
+
 /*
 [0;31m	Red
 [1;31m	Bold Red
