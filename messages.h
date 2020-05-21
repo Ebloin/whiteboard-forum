@@ -11,9 +11,9 @@
 #define MESSAGE_PUBLISHED 2
 
 char *BANNER = "\033[1;34m __      __.__    .__  __        ___.                  __    \n/  \\    /  \\  |__ |__|/  |_  ____\\_ |__   ____   ____ |  | __\n\\   \\/\\/   /  |  \\|  \\   __\\/ __ \\| __ \\ /  _ \\ /  _ \\|  |/ /\n \\        /|   Y  \\  ||  | \\  ___/| \\_\\ (  <_> |  <_> )    < \n  \\__/\\  / |___|  /__||__|  \\___  >___  /\\____/ \\____/|__|_ \\\n       \\/       \\/              \\/    \\/                   \\/\n\nPress enter to start\n\n\033[0m";
-char *COMMANDS_LIST = "\033[1;32m\nCommands:\n- create topic\n- list topics \n- delete topic (only if owner)\n- exit\n\nENTER COMMAND: \033[0m";
-char *COMMANDS_LIST_ADM = "\033[1;32m\nCommands:\n- create topic\n- list topics \n- delete topic (only if owner)\n- add user\n- remove user\n- show users\n- exit\n\nENTER COMMAND: \033[0m";
-char *UNKNOWN = "Comando non riconosciuto\n\0";
+char *COMMANDS_LIST = "\033[1;32m\nCommands:\n- create topic\n- list topics \n- delete topic (only if owner)\n- add message\n- reply message\n- exit\n\nENTER COMMAND: \033[0m";
+char *COMMANDS_LIST_ADM = "\033[1;32m\nCommands:\n- create topic\n- list topics \n- delete topic (only if owner)\n- add message\n- reply message\n- add user\n- remove user\n- show users\n- exit\n\nENTER COMMAND: \033[0m";
+char *UNKNOWN = "Command not recognized\n\0";
 char *EXIT = "Closing connection\n\0";
 char *ACK = "\0";
 char *CMD_BAD = "Command badly formed\n\0";
@@ -21,39 +21,41 @@ char *UNAUTH = "You are not authorized to use this command\n\0";
 
 
 //addtopic
-char *ADDT_COMMANDS = "Inserisci il nome da assegnare al topic: \0";
-char *ADDT_SUCCESS = "Topic creato correttamente\n\0";
+char *ADDT_COMMANDS = "Insert the name of the topic: \0";
+char *ADDT_SUCCESS = "Topic correctly created\n\0";
 char *ADDT_ERROR = "Error in topic creation\n\0";
 
 //delete topic
-char * DELTOP_CODE = "Inserisci il codice del topic che vuoi eliminare: \0";
-char * DELTOP_SUCC = "Topic eliminato correttamente\n\0";
-char * DELTOP_FAIL_NOPROP = "Eliminazione fallita, non sei il proprietario del topic\n\0";
-char * DELTOP_FAIL_NOEXT= "Eliminazione fallita, il topic inserito non esiste\n\0";
+char * DELTOP_CODE = "Insert the code of the topic you want to delete: \0";
+char * DELTOP_SUCC = "Topic correctly deleted\n\0";
+char * DELTOP_FAIL_NOPROP = "Deletion failed, you are not the topic's owner\n\0";
+char * DELTOP_FAIL_NOEXT= "Deletion failed, topic doesn't exists\n\0";
 
-//TODO
-char *NOT_IMPLEMENTED = "Il comando corrente non è ancora stato implementato, sorry <3\n\0";
 
 //addmessage
-char *ADDM_SELECT_TOPIC = "Inserire l'indice relativo al topic su cui aggiungere il messaggio: \0";
-char *ADDM_MESSAGE_TEXT = "Inserisci il testo del messaggio da aggiungere: \0";
-char *ADDM_MESSAGE_POSTED = "Messaggio aggiunto correttamente\n\0";
+char *ADDM_SELECT_TOPIC = "Insert the code of the topic where you want to append the message: \0";
+char *ADDM_MESSAGE_TEXT = "Insert the message: \0";
+char *ADDM_MESSAGE_POSTED = "Message correctly added\n\0";
 
 //List messsages
-char *LTOP_SELECT_TOPIC = "Inserire l'indice del topic di cui visualizzare i messaggi:\0";
+char *LTOP_SELECT_TOPIC = "Insert the code of the topic from where you want to read messages:\0";
 
 //Manage users
-char* ADDU_INSUSR = "Inserisci l'username da aggiungere: \0";
-char* ADDU_INSPWD = "Inserisci la password da aggiungere: \0";
-char* ADDU_SUCC = "Utente creato correttamente\n\0";
+char* ADDU_INSUSR = "Insert username to add: \0";
+char* ADDU_INSPWD = "Insert password for the new user: \0";
+char* ADDU_SUCC = "User correctly added\n\0";
 
 //Login
+char* LOGIN_REQUSR = "Insert USERNAME: \0";
+char* LOGIN_REQPASS = "Insert PASSWORD: \0";
+char* LOGIN_SUCC = "Logged in\n\0";
+char* LOGIN_FAILED = "Login failed, username o password not correct!\n\0";
 
-char* LOGIN_REQUSR = "Inserire USERNAME: \0";
-char* LOGIN_REQPASS = "Inserire PASSWORD: \0";
-char* LOGIN_SUCC = "Login effettuato correttamente\n\0";
-char* LOGIN_FAILED = "Login fallito, username o password non corrette\n\0";
-
+//Reply
+char* REPLY_SELMES = "Insert the ID of the message you want to reply: \0";
+char* REPLY_TEXT = "Insert the text of the reply: \0";
+char* REPLY_ERRNOEXT = "Error, the inserted message ID doesn't exists\n\0";
+char* REPLY_SUCC = "Reply successfully posted\n\0";
 
 /*
 [0;31m	Red

@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h> 
-#define NUM_TOPIC 256
-#define NUM_USERS 256
+#define NUM_TOPIC 128
+#define NUM_USERS 128
 #define NUM_MESSAGES 256
 #define BUF_SIZE 1024
 
@@ -21,6 +21,8 @@ struct Message {
 	int sender; //In realtà è un intero contestualizzato alla shd_mem
 	int in_reply_to;
 	int replies[NUM_MESSAGES];
+	int status;
+	char id[9];
 };
 
 typedef struct Topic topic;
@@ -46,7 +48,7 @@ static int add_topic(topic* tl, char* name, int user_creator) {
 			return -1;
 		}
 		current = &tl[i];
-		if (strcmp(current->name, "") == 0) {
+		if (strcmp(current->name, "") == 0 && i != 0) {
 			break;
 		}
 	}
@@ -91,27 +93,44 @@ static void list_topics(topic* tl, char* buf) {
 		}
 		current = &tl[i];
 		if (strcmp(current->name, "")!=0) {
-			sprintf(tmp, "%s] %s", current->id, current->name);
+			sprintf(tmp, "[%s] %s", current->id, current->name);
 			strcat(buf, tmp);
 		}	
 	}
 }
 
-static int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_index) {
+static int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_index, int inreplyto) {
 	message* ml = w->topics[topic_index].messages;
+	printf("topic: %d, inreplyto:%d\n", topic_index, inreplyto);
+	printf("testo: %s\n", ml[inreplyto].text);
+	if (inreplyto!=0 && strcmp(ml[inreplyto].text, "")==0) {
+		//reply to non existent message
+		return -1;
+	}
 	message* current;
-	int i;
+	int i,l;
 	for (i=0; i<NUM_MESSAGES; i++) {
 		if (i == NUM_MESSAGES) {
 			return -1;
 		}
 		current = &ml[i];
-		if (strcmp(current->text, "") == 0) {
+		if (strcmp(current->text, "") == 0 && i!=0) {
 			break;
 		}
 	}
 	strcpy(current->text, text);
 	current->sender = user_index;
+	current->in_reply_to = inreplyto;
+
+	if (inreplyto != 0) {
+		current = &ml[inreplyto];
+		for (l=0; l<NUM_MESSAGES; l++) {
+			if (current->replies[l] == 0) {
+				current->replies[l] = i;
+			}
+		}
+	}
+
 	return 0;
 }
 
@@ -192,6 +211,16 @@ static void send_cust(char* text, int socket) {
 	char sendbuf[BUF_SIZE] = {0};
 	strncpy(sendbuf, text, strlen(text));
 	send(socket, sendbuf, BUF_SIZE, 0);
+}
+
+static void get_indexes_from_id(int* topicindex, int* msgindex, char* id) {
+	char top[5]={0}, msg[5]={0};
+	memcpy(top, &id[0], 4);
+	memcpy(msg, &id[4], 4);
+	*topicindex = atoi(top);
+	*msgindex = atoi(msg);
+	//printf("%d -> topic, %d -> message\n", *topicindex, *msgindex);
+	return;
 }
 
 /*
