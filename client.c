@@ -14,6 +14,8 @@ int main(int argc, char const *argv[])
 	struct sockaddr_in serv_addr; 
 	char *buf= (char*) malloc(1024 * sizeof(char));
 	char buffer[1024] = {0}; 
+	char sendbuf[1024] = {0};
+	char* cmd;
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
 	{ 
 		printf("\n Socket creation error \n"); 
@@ -46,13 +48,17 @@ int main(int argc, char const *argv[])
 		read( sock , buffer, 1024); 
 		printf("%s",buffer );
 		fflush(stdout);
+		memset(buf, 0, sizeof(buf));
 		fgets(buf, 1024*sizeof(char), stdin);
-		send(sock , buf , strlen(buf) , 0 );
+		send(sock , buf , 1024 , 0 );
+		if (strncmp(buf, "exit", strlen("exit"))==0) {
+			break;
+		}
 		if (strncmp(buf, "5\n", strlen(buf))==0) {
 			break;
 		}
 		memset(buffer, 0, sizeof(buffer));
-		read( sock , buffer, 1024); 
+		read( sock , buffer, 1024);
 		printf("%s",buffer );
 		fflush(stdout);
 	}

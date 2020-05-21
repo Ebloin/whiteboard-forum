@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h> 
 #define NUM_TOPIC 256
 #define NUM_USERS 256
 #define NUM_MESSAGES 256
@@ -8,8 +9,8 @@
 
 typedef struct User user;
 struct User {
-	char username[64];
-	char password[64];
+	char username[32];
+	char password[32];
 	int topic_subscriptions[NUM_TOPIC];
 	int sent_messages[NUM_MESSAGES];
 };
@@ -24,7 +25,8 @@ struct Message {
 
 typedef struct Topic topic;
 struct Topic {
-	char name[64];
+	char id[5];
+	char name[32];
 	message messages[256];
 	int owner;
 };
@@ -35,7 +37,7 @@ struct Whiteboard {
 	topic topics[NUM_TOPIC];
 };
 
-static int add_topic(topic* tl, char* name) {
+static int add_topic(topic* tl, char* name, int user_creator) {
 	int i =0;
 	topic* current;
 	for (i; i<NUM_TOPIC; i++) {
@@ -49,7 +51,31 @@ static int add_topic(topic* tl, char* name) {
 		}
 	}
 	strcpy(current->name, name);
+	char id[5];
+	sprintf(id, "%04d", i);
+	printf("%s\n", id);
+	strcpy(current->id, id);
+	current->owner = user_creator;
 	return i;
+}
+
+static int delete_topic(topic* tl, char* id, int requester) {
+	int i=0;
+	topic* current;
+	for (i; i<NUM_TOPIC; i++) {
+		if (i == NUM_TOPIC) {
+			return -1;
+		}
+		current = &tl[i];
+		if (strncmp(current->id, id, 4)==0) {
+			if (current->owner == requester) {
+				memset(current, 0, sizeof(topic));
+				return 0;
+			}
+			//Unauthorized
+			else return -2;
+		}	
+	}
 }
 
 static void list_topics(topic* tl, char* buf) {
@@ -65,24 +91,10 @@ static void list_topics(topic* tl, char* buf) {
 		}
 		current = &tl[i];
 		if (strcmp(current->name, "")!=0) {
-			sprintf(tmp, "%d)%s", i, current->name);
+			sprintf(tmp, "%s] %s", current->id, current->name);
 			strcat(buf, tmp);
 		}	
 	}
-}
-
-static int authenticate(user* lu, char* username, char* password) {
-	user* current;
-	int i;
-	for (i=0; i<NUM_USERS; i++) {
-		current = &lu[i];
-		if (strcmp(username, current->username)==0) {
-			if (strcmp(password, current->password)==0) {
-				return 1;
-			}
-		}
-	}
-	return 0;
 }
 
 static int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_index) {
@@ -169,11 +181,17 @@ static int login(user* ul, char* username, char* password) {
 	user* current;
 	for (i; i<NUM_USERS; i++) {
 		current = &ul[i];
-		if (strcmp(current->username, username)!=0 && strcmp(current->password, password)!=0) {
+		if (strcmp(current->username, username)==0 && strcmp(current->password, password)==0) {
 			return i;
 		}	
 	}
-	return 0;
+	return -1;
+}
+
+static void send_cust(char* text, int socket) {
+	char sendbuf[BUF_SIZE] = {0};
+	strncpy(sendbuf, text, strlen(text));
+	send(socket, sendbuf, BUF_SIZE, 0);
 }
 
 /*
