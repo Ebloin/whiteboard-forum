@@ -54,10 +54,23 @@ int main(int argc, char const *argv[]) {
 	//printf("%d\n", sizeof(whiteboard));
 	//printf("%d\n", sizeof(*w));
 	memset(w,0,sizeof(whiteboard));
-	//printf("test\n");
 	//Creo l'utente admin
 	create_user(w->users, "admin\n", "admin\n");
+	create_user(w->users, "test\n", "test\n");
+	add_topic(w->topics, "WHITEBOARD RULES\n\0", 0);
+	add_message_to_topic(w, "Welcome to whiteboard forum\n\0", 0, 1, 0);
+	subscribe_to_topic(w, 1, 1);
 	shmdt(w);
+
+	//Semafori
+	key_t semkey = IPC_PRIVATE;
+	int mutex;
+	semclean(semkey);
+	if ((mutex = initsem(semkey)) < 0) {
+		perror("initsem");
+		exit(1);
+	}
+
     int newchild=0;
     while(1) {
         if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen))<0) { 
@@ -108,7 +121,7 @@ int main(int argc, char const *argv[]) {
 				memset(buffer, 0, sizeof(buffer));		
 				read( new_socket , buffer, 1024);
 				send_cust(ACK, new_socket);
-				
+
 				while(alive) {
 					//admin
 					if (AUTH == 0) {
@@ -153,18 +166,33 @@ int main(int argc, char const *argv[]) {
 							read( new_socket , buffer, 1024);
 							printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Topicname to add received -> %s", PID,buffer );
 							fflush(stdout);
+							Pwait(mutex);
 							res = add_topic(w->topics, buffer, AUTH);
+							Vpost(mutex);
 							//error
 							if (res == -1) {
 								send_cust(ADDT_ERROR, new_socket);
 								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDT_ERROR);
 								fflush(stdout);
 							}	
+							else if (res == -2) {
+								send_cust(ADDT_ERROR_NULL, new_socket);
+								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDT_ERROR_NULL);
+								fflush(stdout);
+							}
+							else if (res == -3) {
+								send_cust(ADDT_ERROR_TOOLONG, new_socket);
+								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDT_ERROR_TOOLONG);
+								fflush(stdout);
+							}
 							//success						
 							else {
 								send_cust(ADDT_SUCCESS, new_socket);
 								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDT_SUCCESS);
 								fflush(stdout);
+								Pwait(mutex);
+								subscribe_to_topic(w, res, AUTH);
+								Vpost(mutex);
 							}
 						}
 						else {
@@ -175,7 +203,7 @@ int main(int argc, char const *argv[]) {
 						}
 					}
 
-					//DELETE TOPIC
+					//DELETE TOPIC / USER
 					else if (strncmp(cmd, "delete", strlen("delete"))==0) {
 						int res;
 						//printf("comando %s\n", cmd);
@@ -193,7 +221,9 @@ int main(int argc, char const *argv[]) {
 							fflush(stdout);
 							//delete
 							//add_topic(w->topics, buffer);
+							Pwait(mutex);
 							res= delete_topic(w->topics, buffer, AUTH);
+							Vpost(mutex);
 							if (res == 0) {	
 								send_cust(DELTOP_SUCC, new_socket);
 								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, DELTOP_SUCC);
@@ -210,6 +240,50 @@ int main(int argc, char const *argv[]) {
 								fflush(stdout);
 							}
 						}
+
+						else if (strncmp(cmd, "user", strlen("user")) == 0) {
+							if (AUTH != 0) {
+								send_cust(UNAUTH, new_socket);
+								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, UNAUTH);
+								fflush(stdout);
+							}
+							else {
+								send_cust(ACK, new_socket);
+								send_cust(DELUSR_INS_USR, new_socket);
+								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s\n", PID, DELUSR_INS_USR);
+								fflush(stdout);
+								//leggo il nome del topic
+								memset(buffer, 0, sizeof(buffer));		
+								read( new_socket , buffer, 1024);
+								printf("\033[1;33m[S <-- %d] CLIENT:\033[0m User to delete received -> %s", PID,buffer );
+								fflush(stdout);
+								int u=atoi(buffer);
+								//delete
+								//add_topic(w->topics, buffer);
+								Pwait(mutex);
+								res= delete_user(w, u);
+								Vpost(mutex);
+
+								if (res == -1) {
+									send_cust(DELUSR_ERR_ADM, new_socket);
+									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, DELUSR_ERR_ADM);
+									fflush(stdout);
+								}
+
+								else if (res == -2) {
+									send_cust(DELUSR_ERR_NOEXT, new_socket);
+									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, DELUSR_ERR_NOEXT);
+									fflush(stdout);
+								}
+
+								else {	
+									send_cust(DELUSR_OK, new_socket);
+									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, DELUSR_OK);
+									fflush(stdout);
+								}
+							}
+						}
+
 						else {
 							//comando errato
 							send_cust(UNKNOWN, new_socket);
@@ -219,16 +293,39 @@ int main(int argc, char const *argv[]) {
 					}
 
 					//LIST TOPICS/MESSAGES
+					//add control list topics
 					else if (strncmp(cmd, "list", strlen("list"))==0) {
 						int res;
 						cmd = strtok(NULL, " ");
 						//TOPICS
 						if (strncmp(cmd, "topics", strlen("topics")) == 0) {
-							memset(buf, 0, sizeof(buf));
-							list_topics(w->topics, buf);
-							send_cust(buf, new_socket); 
-							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, "Topic list sent\n");
-							fflush(stdout);
+							cmd = strtok(NULL, " ");
+
+							if (strncmp(cmd, "availables", strlen("availables")) == 0) {
+								memset(buf, 0, sizeof(buf));
+								Pwait(mutex);
+								list_topics(w->topics, buf);
+								Vpost(mutex);
+								send_cust(buf, new_socket); 
+								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, "Topic list sent\n");
+								fflush(stdout);
+							}
+
+							else if (strncmp(cmd, "subscriptions", strlen("subscriptions")) == 0) {
+								memset(buf, 0, sizeof(buf));
+								Pwait(mutex);
+								list_subscripted_topics(w, w->topics, AUTH, buf);
+								Vpost(mutex);
+								send_cust(buf, new_socket); 
+								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, "Topic list sent\n");
+								fflush(stdout);
+							}
+							else {
+								//comando errato print usage
+								send_cust(UNKNOWN, new_socket);
+								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, UNKNOWN);
+								fflush(stdout);
+							}
 						}
 						//MESSAGES
 						else if (strncmp(cmd, "messages", strlen("messages")) == 0) {
@@ -239,10 +336,15 @@ int main(int argc, char const *argv[]) {
 							fflush(stdout);
 							memset(buffer, 0, sizeof(buffer));
 							read( new_socket , buffer, 1024);
-							int topicindex = atoi(buffer);
+							int topicindex;// = atoi(buffer);
+							get_topic_index(&topicindex, buffer);
+							printf("DEBUG: topic index->%d\n", topicindex);
 							memset(buf, 0, sizeof(buf));
-							list_messages_from_topic(w, buf, topicindex);
-							send(new_socket , buf , 1024, 0); 
+							Pwait(mutex);
+							list_messages_from_topic(w, buf, topicindex, AUTH);
+							Vpost(mutex);
+							send_cust(buf, new_socket);
+							//send(new_socket , buf , 1024, 0); 
 							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, "Topic's messages listed\n");
 							fflush(stdout);
 						}
@@ -254,7 +356,7 @@ int main(int argc, char const *argv[]) {
 							fflush(stdout);
 						}
 					}
-
+\
 					//ADD USER
 					else if (strncmp(cmd, "add", strlen("add"))==0){
 						int res;
@@ -292,13 +394,34 @@ int main(int argc, char const *argv[]) {
 								int res;
 								//BUG
 								//printf("%s %s nuovoutente\n", username, password);
+								Pwait(mutex);
 								res = create_user(w->users, username, password);
-								if (res == -1) printf("Errore in creazione\n");
+								Vpost(mutex);
 								//list_topics(w->topics);
-								send_cust(ADDU_SUCC, new_socket);
-								//send(new_socket , ADDU_SUCC , 1024, 0); 
-								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDU_SUCC);
-								fflush(stdout);
+
+								if (res==-2) {
+									send_cust(ADDU_ERR_USR, new_socket);
+									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDU_ERR_USR);
+									fflush(stdout);
+								}
+
+								else if (res==-3) {
+									send_cust(ADDU_ERR_PAS, new_socket);
+									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDU_ERR_PAS);
+									fflush(stdout);
+								}
+
+								else if (res==-1) {
+									send_cust(ADDU_ERR_LIM, new_socket);
+									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDU_ERR_LIM);
+									fflush(stdout);
+								}
+
+								else {
+									send_cust(ADDU_SUCC, new_socket);
+									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDU_SUCC);
+									fflush(stdout);
+								}
 							}
 						}
 						else {
@@ -322,7 +445,9 @@ int main(int argc, char const *argv[]) {
 								}
 								else {	
 									memset(buf, 0, sizeof(buf));
+									Pwait(mutex);
 									list_users(w->users, buf);
+									Vpost(mutex);
 									send_cust(buf, new_socket);
 									//send(new_socket , buf , 1024, 0); 
 									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, "Lista dei utenti inviata\n");
@@ -359,7 +484,8 @@ int main(int argc, char const *argv[]) {
 								memset(buffer, 0, sizeof(buffer));		
 								read( new_socket , buffer, 1024);
 								int topicindex;
-								topicindex = atoi(buffer);
+								//topicindex = atoi(buffer);
+								get_topic_index(&topicindex, buffer);
 								printf("%d\n", topicindex);
 								printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Topic selected to add message -> %s", PID,buffer );
 								fflush(stdout);
@@ -374,11 +500,33 @@ int main(int argc, char const *argv[]) {
 								read( new_socket , buffer, 1024);
 								printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Message to post sent from client -> %s", PID,buffer );
 								fflush(stdout);
-								add_message_to_topic(w,buffer, AUTH, topicindex, 0);
-								send_cust(ADDM_MESSAGE_POSTED, new_socket);
-								//send(new_socket , ADDM_MESSAGE_POSTED , 1024, 0); 
-								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDM_MESSAGE_POSTED);
-								fflush(stdout);
+								Pwait(mutex);
+								res = add_message_to_topic(w,buffer, AUTH, topicindex, 0);
+								Vpost(mutex);
+
+								if (res == -2) {
+									send_cust(ADDM_ERROR_NOSUBSC, new_socket);
+									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDM_ERROR_NOSUBSC);
+									fflush(stdout);
+								}
+
+								else if (res == -4) {
+									send_cust(ADDM_ERROR_TEXT, new_socket);
+									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDM_ERROR_TEXT);
+									fflush(stdout);
+								}
+
+								else if (res == -3) {
+									send_cust(ADDM_ERROR_NOEXT, new_socket);
+									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDM_ERROR_NOEXT);
+									fflush(stdout);
+								}
+
+								else {
+									send_cust(ADDM_MESSAGE_POSTED, new_socket);
+									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDM_MESSAGE_POSTED);
+									fflush(stdout);
+								}
 							}
 							else {
 								//comando errato print usage
@@ -423,12 +571,21 @@ int main(int argc, char const *argv[]) {
 								read( new_socket , buffer, 1024);
 								printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Message to post sent from client -> %s", PID,buffer );
 								fflush(stdout);
+								Pwait(mutex);
 								res = add_message_to_topic(w, buffer, AUTH, topicindex, msgindex);
-								if (res == -1) {
+								Vpost(mutex);
+								if (res == -1 || res == -3) {
 									send_cust(REPLY_ERRNOEXT, new_socket);
 									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, REPLY_ERRNOEXT);
 									fflush(stdout);
 								}
+
+								else if (res == -4) {
+									send_cust(ADDM_ERROR_TEXT, new_socket);
+									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDM_ERROR_TEXT);
+									fflush(stdout);
+								}
+
 								else {
 									send_cust(REPLY_SUCC, new_socket);
 									printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, REPLY_SUCC);
@@ -450,49 +607,102 @@ int main(int argc, char const *argv[]) {
 						}
 					}
 					
+					//SUBSCRIBE TO TOPIC
+					else if (strncmp(cmd, "subscribe", strlen("subscribe"))==0){
+						int res;
+						cmd = strtok(NULL, " ");
+						if (cmd != NULL) {
+							send_cust(ACK, new_socket);
+							send_cust(TOPSUB_NAME, new_socket);
+							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s\n", PID, ADDT_COMMANDS);
+							fflush(stdout);
+							//leggo il nome del topic
+							memset(buffer, 0, sizeof(buffer));		
+							read( new_socket , buffer, 1024);
+							printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Topic code to subscribe received -> %s", PID,buffer );
+							fflush(stdout);
+							int topic_index = atoi(buffer);
+							//res = add_topic(w->topics, buffer, AUTH);
+							Pwait(mutex);
+							res = subscribe_to_topic(w, topic_index, AUTH);
+							Vpost(mutex);
+							//error
+							if (res == -1) {
+								send_cust(TOPSUB_FAIL_NOEXT, new_socket);
+								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, TOPSUB_FAIL_NOEXT);
+								fflush(stdout);
+							}	
+
+							else if (res == -2) {
+								send_cust(TOPSUB_FAIL_ALREADY, new_socket);
+								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, TOPSUB_FAIL_ALREADY);
+								fflush(stdout);
+							}	
+
+							//success						
+							else {
+								send_cust(TOPSUB_SUCC, new_socket);
+								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, TOPSUB_SUCC);
+								fflush(stdout);
+							}				
+						}
+
+						else {
+							//comando errato print usage
+							send_cust(UNKNOWN, new_socket);
+							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, UNKNOWN);
+							fflush(stdout);
+						}
+					}
+
+					//STATUS MESSAGE
+					else if (strncmp(cmd, "status", strlen("status"))==0){
+						int res;
+						cmd = strtok(NULL, " ");
+						if (cmd != NULL) {
+							if (strncmp(cmd, "message", strlen("message")) == 0) {
+								send_cust(ACK, new_socket);
+								send_cust(STAT_MSGCODE, new_socket);
+								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s\n", PID, STAT_MSGCODE);
+								fflush(stdout);
+								memset(buffer, 0, sizeof(buffer));		
+								read( new_socket , buffer, 1024);
+								int topicindex, msgindex;
+								get_indexes_from_id(&topicindex, &msgindex, buffer);
+								//printf("%d\n", topicindex);
+								printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Message code sent from client -> %s", PID,buffer );
+								fflush(stdout);
+								memset(buf, 0, sizeof(buf));
+								Pwait(mutex);
+								print_status_message(w, topicindex, msgindex, buf, AUTH);
+								Vpost(mutex);
+								send_cust(buf, new_socket);
+								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, "Message status sent\n");
+								fflush(stdout);
+							}
+							else {
+								//comando errato print usage
+								send_cust(UNKNOWN, new_socket);
+								printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, UNKNOWN);
+								fflush(stdout);
+							}
+						}
+						else {
+							//comando errato print usage
+							send_cust(UNKNOWN, new_socket);
+							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, UNKNOWN);
+							fflush(stdout);
+						}
+					}
+
 					//UNKNOWN
 					else {
 						send_cust(UNKNOWN, new_socket);
 						printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, UNKNOWN);
 						fflush(stdout);
 					}
-					/*
-					switch(command) {	
-                        
-						case ADD_MESSAGE_TO_TOPIC:
-							send_cust(ACK, n
-	printf("%s")ew_socket);
-							//send(new_socket , ACK , 1024, 0);
-							send_cust(ADDM_SELECT_TOPIC, new_socket);
-							//send(new_socket , ADDM_SELECT_TOPIC , 1024, 0); 
-							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s\n", PID, ADDM_SELECT_TOPIC);
-							fflush(stdout);
-							memset(buffer, 0, sizeof(buffer));		
-							read( new_socket , buffer, 1024);
-							int topicindex;
-							topicindex = atoi(buffer);
-							printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Topic selected to add message -> %s", PID,buffer );
-							fflush(stdout);
-							send_cust(ACK, new_socket);
-							//send(new_socket , ACK , 1024, 0);
-							//Richiedi testo messaggio
-							send_cust(ADDM_MESSAGE_TEXT, new_socket);
-							//send(new_socket , ADDM_MESSAGE_TEXT , 1024, 0); 
-							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s\n", PID, ADDM_MESSAGE_TEXT);
-							fflush(stdout);
-							memset(buffer, 0, sizeof(buffer));		
-							read( new_socket , buffer, 1024);
-							printf("\033[1;33m[S <-- %d] CLIENT:\033[0m Message to post sent from client -> %s", PID,buffer );
-							fflush(stdout);
-							add_message_to_topic(w,buffer, AUTH, topicindex);
-							send_cust(ADDM_MESSAGE_POSTED, new_socket);
-							//send(new_socket , ADDM_MESSAGE_POSTED , 1024, 0); 
-							printf("\033[1;32m[S --> %d] SERVER:\033[0m %s", PID, ADDM_MESSAGE_POSTED);
-							fflush(stdout);
-							break;
-
-					}*/
 				}
+				//endtest
 				close(new_socket);
 				printf("\033[1;31mConnection close with client %d\n\033[0m", PID);
 				//stacclo la shm

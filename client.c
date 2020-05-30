@@ -7,6 +7,13 @@
 #include <stdlib.h>
 #include "messages.h"
 #define PORT 8000 
+#define BUF_SIZE 1024
+
+static void send_cust(char* text, int socket) {
+	char sendbuf[BUF_SIZE] = {0};
+	strncpy(sendbuf, text, strlen(text));
+	send(socket, sendbuf, BUF_SIZE, 0);
+}
 
 int main(int argc, char const *argv[]) 
 { 
@@ -37,11 +44,7 @@ int main(int argc, char const *argv[])
 		printf("\nConnection Failed \n"); 
 		return -1; 
 	}
-/*
-	read( sock , buffer, 1024); 
-	printf("%s",buffer);
-	send(sock, "banner ricevuto\n", strlen("banner ricevuto\n"), 0);
-*/
+
 	while (1) {
 		//printf("Send something to the server: ");
 		memset(buffer, 0, sizeof(buffer));
@@ -50,11 +53,8 @@ int main(int argc, char const *argv[])
 		fflush(stdout);
 		memset(buf, 0, sizeof(buf));
 		fgets(buf, 1024*sizeof(char), stdin);
-		send(sock , buf , 1024 , 0 );
+		send_cust(buf, sock);
 		if (strncmp(buf, "exit", strlen("exit"))==0) {
-			break;
-		}
-		if (strncmp(buf, "5\n", strlen(buf))==0) {
 			break;
 		}
 		memset(buffer, 0, sizeof(buffer));
