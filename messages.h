@@ -1,7 +1,37 @@
 //GENERAL
 char *BANNER = "\033[1;34m __      __.__    .__  __        ___.                  __    \n/  \\    /  \\  |__ |__|/  |_  ____\\_ |__   ____   ____ |  | __\n\\   \\/\\/   /  |  \\|  \\   __\\/ __ \\| __ \\ /  _ \\ /  _ \\|  |/ /\n \\        /|   Y  \\  ||  | \\  ___/| \\_\\ (  <_> |  <_> )    < \n  \\__/\\  / |___|  /__||__|  \\___  >___  /\\____/ \\____/|__|_ \\\n       \\/       \\/              \\/    \\/                   \\/\n\nPress enter to start\n\n\033[0m";
-char *COMMANDS_LIST = "\033[1;32m\nCommands:\n- create topic\n- list topics availables\n- list topics subscriptions\n- subscribe to topic\n - delete topic (only if owner)\n- append message\n- reply message\n- list messages\n- status message\n- exit\n\nENTER COMMAND: \033[0m";
-char *COMMANDS_LIST_ADM = "\033[1;32m\nCommands:\n- create topic\n- list topics availables\n- subscribe to topic\n- delete topic (only if owner)\n- append message\n- reply message\n- list messages\n- status message\n- add user\n- remove user\n- show users\n- delete user\n- exit\n\nENTER COMMAND: \033[0m";
+char *COMMANDS_LIST = "\033[1;32m\n\
+Commands:\n\
+- create topic\n\
+- delete topic (only if owner)\n\
+- list available topics\n\
+- list subscripted topics\n\
+- subscribe to topic\n\
+- create thread\n- reply message\n\
+- reply message\n\
+- list messages\n- status message\n\
+- message status\n\
+- exit\n\n\
+CMD > \033[0m";
+
+char *COMMANDS_LIST_ADM = "\033[1;32m\n\
+Commands:\n\
+- create topic\n\
+- delete topic (only if owner)\n\
+- list available topics\n\
+- list subscripted topics\n\
+- subscribe to topic\n\
+- create thread\n- reply message\n\
+- reply message\n\
+- list messages\n- status message\n\
+- message status\n\
+- exit\n\
+ADMIN COMMANDS:\n\
+- add user\n\
+- show users\n\
+- delete user\n\n\
+ CMD > \033[0m";
+
 char *UNKNOWN = "Command not recognized\n\0";
 char *EXIT = "Closing connection\n\0";
 char *ACK = "\0";
@@ -34,7 +64,7 @@ char *ADDM_ERROR_TEXT = "Message text cannot be void or larger than 1023 charact
 
 
 //List messsages
-char *LTOP_SELECT_TOPIC = "Insert the code of the topic from where you want to read messages:\0";
+char *LTOP_SELECT_TOPIC = "Insert the code of the topic from where you want to read messages: \0";
 
 //Manage users
 char* ADDU_INSUSR = "Insert username to add: \0";
@@ -43,7 +73,7 @@ char* ADDU_SUCC = "User correctly added\n\0";
 char* ADDU_ERR_USR = "Username cannot be null or larger than 30 characters\n\0";
 char* ADDU_ERR_PAS = "Password cannot be null or larger than 30 characters\n\0";
 char* ADDU_ERR_LIM = "Max num users limit reached\n\0";
-char* DELUSR_INS_USR = "Insert the code of the user you want to delete\n\0";
+char* DELUSR_INS_USR = "Insert the code of the user you want to delete: \0";
 char* DELUSR_OK = "User deleted successfully\n\0";
 char* DELUSR_ERR_ADM = "User admin cannot be deleted\n\0";
 char* DELUSR_ERR_NOEXT = "Selected user doesn't exists\n\0";

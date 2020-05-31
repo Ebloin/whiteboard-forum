@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include "messages.h"
 #define PORT 8000 
-#define BUF_SIZE 1024
+#define BUF_SIZE 16384
 
 static void send_cust(char* text, int socket) {
 	char sendbuf[BUF_SIZE] = {0};
@@ -19,9 +19,9 @@ int main(int argc, char const *argv[])
 { 
 	int sock = 0, valread; 
 	struct sockaddr_in serv_addr; 
-	char *buf= (char*) malloc(1024 * sizeof(char));
-	char buffer[1024] = {0}; 
-	char sendbuf[1024] = {0};
+	char *buf= (char*) malloc(BUF_SIZE * sizeof(char));
+	char buffer[BUF_SIZE] = {0}; 
+	char sendbuf[BUF_SIZE] = {0};
 	char* cmd;
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
 	{ 
@@ -48,17 +48,19 @@ int main(int argc, char const *argv[])
 	while (1) {
 		//printf("Send something to the server: ");
 		memset(buffer, 0, sizeof(buffer));
-		read( sock , buffer, 1024); 
+		read( sock , buffer, BUF_SIZE); 
 		printf("%s",buffer );
 		fflush(stdout);
 		memset(buf, 0, sizeof(buf));
-		fgets(buf, 1024*sizeof(char), stdin);
+		fgets(buf, BUF_SIZE*sizeof(char), stdin);
+		strtok(buf, "\n");
 		send_cust(buf, sock);
+		printf("\e[1;1H\e[2J");
 		if (strncmp(buf, "exit", strlen("exit"))==0) {
 			break;
 		}
 		memset(buffer, 0, sizeof(buffer));
-		read( sock , buffer, 1024);
+		read( sock , buffer, BUF_SIZE);
 		printf("%s",buffer );
 		fflush(stdout);
 	}
