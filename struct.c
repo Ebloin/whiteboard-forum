@@ -148,7 +148,6 @@ void list_subscripted_topics(whiteboard* w, topic* tl, int userindex, char* buf)
 	strcpy(buf, BACK_BLUE"SUBSCRIPTED TOPICS:                                                 \n"RESET);
 	char tmp[BUF_SIZE]={0};
 	user* u = &w->users[userindex];
-	//printf("DEBUG: current_user=%04d\n", userindex);
 	int i=0, anysubscription=0;
 	topic* current;
 	for (i; i<NUM_TOPIC; i++) {
@@ -156,9 +155,8 @@ void list_subscripted_topics(whiteboard* w, topic* tl, int userindex, char* buf)
 		//DECIDI SE SCORRERLA TUTTA O FERMARTI AL PRIMO NULL
 
 		if(u->subscriptions[i] != 0) {
-			//printf("DEBUG: curuser_subscription=%04d\n", u->subscriptions[i]);
 			current = &tl[u->subscriptions[i]];
-			sprintf(tmp, "[%s] %s\n", current->id, current->name);
+			sprintf(tmp, BOLD_BLUE"[%s] %s\n"RESET, current->id, current->name);
 			strcat(buf, tmp);
 			anysubscription++;
 		}
@@ -169,7 +167,7 @@ void list_subscripted_topics(whiteboard* w, topic* tl, int userindex, char* buf)
 }
 
 int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_index, int inreplyto) {
-	if (strcmp(text, "\n")==0 || strlen(text)==0 || strlen(text)>=1023) {
+	if (strcmp(text, "\n")==0 || strlen(text)==0 || strlen(text)>=63) {
 		return -4;
 	}
 
@@ -184,10 +182,10 @@ int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_in
 	message* ml = w->topics[topic_index].messages;
 	if (inreplyto!=0 && strcmp(ml[inreplyto].text, "")==0) {
 		//reply to non existent message
-		return -1;
+		return -5;
 	}
 	message* current;
-	int i,l;
+	int i,l,x;
 	for (i=0; i<=NUM_MESSAGES; i++) {
 		if (i == NUM_MESSAGES) {
 			return -1;
@@ -206,11 +204,12 @@ int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_in
 	strcpy(current->id, id);
 
 	//aggiorno per le replies
+	message* reply_to;
 	if (inreplyto != 0) {
-		current = &ml[inreplyto];
+		reply_to = &ml[inreplyto];
 		for (l=0; l<NUM_MESSAGES; l++) {
-			if (current->replies[l] == 0) {
-				current->replies[l] = i;
+			if (reply_to->replies[l] == 0) {
+				reply_to->replies[l] = i;
 				break;
 			}
 		}
@@ -218,16 +217,16 @@ int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_in
 
 	//Creo l'array delle visualizzazioni
 	//per ogni utente
-	for (i=1; i<NUM_USERS; i++) {
+	for (x=1; x<NUM_USERS; x++) {
 		//Se l'utente è sottoscritto
-		if (check_utente_exists(w, i)) {
+		if (check_utente_exists(w, x)) {
 			//da visualizzare
-			if (check_subscription(&w->topics[topic_index], i)) {
-				current->visualizations[i] = 1;
+			if (check_subscription(&w->topics[topic_index], x) && x!= user_index) {
+				current->visualizations[x] = 1;
 			}
 			//non sottoscritto
 			else {
-				current->visualizations[i] = 2;
+				current->visualizations[x] = 2;
 			}
 		}
 	}
@@ -379,7 +378,6 @@ int subscribe_to_topic(whiteboard* w, int topicindex, int userindex) {
 		}
 		if (u->subscriptions[i] == 0) {
 			u->subscriptions[i] = topicindex;
-			//printf("DEBUG: topicindex=%04d, userindex=%04d\n", topicindex, userindex);
 			break;
 		}
 	}
@@ -432,9 +430,10 @@ int print_status_message(whiteboard* w, int topic_index, int msg_index, char* bu
 		strcat(buf, BOLD_RED"ERROR: Only the sender can see the status of a message\n"RESET);
 		return -1;
 	}
+
 	char tmp[BUF_SIZE]={0};
 	int i;
-	sprintf(tmp, BACK_BLUE"STATUS OF MESSAGE [#%04d%04d]:                             \n"RESET, topic_index, requester);
+	sprintf(tmp, BACK_BLUE"STATUS OF MESSAGE [#%04d%04d]:                             \n"RESET, topic_index, msg_index);
 	strcpy(buf, tmp);
 	strcat(buf, BOLD_BLUE"Message delivered:\n"RESET);
 	for (i=1; i<NUM_USERS; i++) {
@@ -451,12 +450,12 @@ int print_status_message(whiteboard* w, int topic_index, int msg_index, char* bu
 	for (i=1; i<NUM_USERS; i++) {
 		if (check_utente_exists(w, i) && i!= requester) {
 			if (m->visualizations[i] == 0) {
-				//printf("entro1\n");
 				sprintf(tmp, " -> %s\n", w->users[i].username);
 				strcat(buf, tmp);
 			}
 		}
 	}
+
 	return 0;
 }
 

@@ -52,7 +52,7 @@ int main(int argc, char const *argv[]) {
 	memset(w,0,sizeof(whiteboard));
 	create_user(w->users, "admin", "admin");
 	create_user(w->users, "test", "test");
-	add_topic(w->topics, "WHITEBOARD RULES\0", 0);
+	add_topic(w->topics, "WHITEBOARD MAIN TOPIC\0", 0);
 	subscribe_to_topic(w, 1, 1);
 	add_message_to_topic(w, "Welcome to whiteboard forum\0", 0, 1, 0);
 	shmdt(w);
@@ -350,6 +350,9 @@ int main(int argc, char const *argv[]) {
 							}
 
 							else {
+								Pwait(mutex);
+								subscribe_to_topic(w,1,res);
+								Vpost(mutex);
 								send_cust(ADDU_SUCC, new_socket);
 								printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, ADDU_SUCC);
 								fflush(stdout);
@@ -375,7 +378,7 @@ int main(int argc, char const *argv[]) {
 						}
 					}
 
-					//APPEND MESSAGE
+					//CREATE THREAD
 					else if (strncmp(cmd, "create thread", strlen("create thread"))==0) {
 						int res;
 						send_cust(ACK, new_socket);
@@ -418,6 +421,12 @@ int main(int argc, char const *argv[]) {
 							fflush(stdout);
 						}
 
+						else if (res == -1) {
+							send_cust(ADDM_ERROR_LIMIT, new_socket);
+							printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, ADDM_ERROR_LIMIT);
+							fflush(stdout);
+						}
+
 						else {
 							send_cust(ADDM_MESSAGE_POSTED, new_socket);
 							printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, ADDM_MESSAGE_POSTED);
@@ -449,7 +458,7 @@ int main(int argc, char const *argv[]) {
 						Pwait(mutex);
 						res = add_message_to_topic(w, buffer, AUTH, topicindex, msgindex);
 						Vpost(mutex);
-						if (res == -1 || res == -3) {
+						if (res == -5 || res == -3) {
 							send_cust(REPLY_ERRNOEXT, new_socket);
 							printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, REPLY_ERRNOEXT);
 							fflush(stdout);
@@ -458,6 +467,12 @@ int main(int argc, char const *argv[]) {
 						else if (res == -4) {
 							send_cust(ADDM_ERROR_TEXT, new_socket);
 							printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, ADDM_ERROR_TEXT);
+							fflush(stdout);
+						}
+
+						else if (res == -1) {
+							send_cust(ADDM_ERROR_LIMIT, new_socket);
+							printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, ADDM_ERROR_LIMIT);
 							fflush(stdout);
 						}
 

@@ -54,7 +54,6 @@ char *COMMANDS_LIST_ADM = BACK_GREEN
 - create topic\n\
 - delete topic (only if owner)\n\
 - list available topics\n\
-- list subscripted topics\n\
 - subscribe to topic\n\
 - create thread\n- reply message\n\
 - reply message\n\
@@ -94,8 +93,8 @@ char *ADDM_MESSAGE_TEXT = BOLD_GREEN"Insert the message: "RESET"\0";
 char *ADDM_MESSAGE_POSTED = BOLD_BLUE"Message correctly added"RESET"\n\0";
 char *ADDM_ERROR_NOSUBSC = BOLD_RED"ERROR: you can't write in a topic if you are not subscribed"RESET"\n\0";
 char *ADDM_ERROR_NOEXT = BOLD_RED"ERROR: selected topic doesn't exists"RESET"\n\0";
-char *ADDM_ERROR_TEXT = BOLD_RED"ERROR: Message text cannot be void or larger than 1023 characters"RESET"\n\0";
-
+char *ADDM_ERROR_TEXT = BOLD_RED"ERROR: Message text cannot be void or larger than 60 characters"RESET"\n\0";
+char* ADDM_ERROR_LIMIT = BOLD_RED"ERROR: Messages limit reached in the topic"RESET"\n\0";
 
 //List messsages
 char *LTOP_SELECT_TOPIC = BOLD_GREEN"Insert the code of the topic from where you want to read messages: "RESET"\0";
