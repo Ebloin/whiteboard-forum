@@ -7,19 +7,21 @@
 #include <sys/sem.h>
 #define NUM_TOPIC 32
 #define NUM_USERS 128
-#define NUM_MESSAGES 256
+#define NUM_MESSAGES 128
 #define BUF_SIZE 16384
+#define MSG_LENGTH 60
+#define NAME_LENGTH 32
 
 typedef struct User user;
 struct User {
-	char username[32];
-	char password[32];
+	char username[NAME_LENGTH];
+	char password[NAME_LENGTH];
 	int subscriptions[NUM_TOPIC];
 };
 
 typedef struct Message message;
 struct Message {
-	char text[1024];
+	char text[MSG_LENGTH];
 	int sender;
 	int in_reply_to;
 	int replies[NUM_MESSAGES];
@@ -31,8 +33,8 @@ struct Message {
 typedef struct Topic topic;
 struct Topic {
 	char id[5];
-	char name[32];
-	message messages[256];
+	char name[NAME_LENGTH];
+	message messages[NUM_MESSAGES];
 	int owner;
 	int subscripteds[NUM_USERS];
 };
@@ -100,6 +102,7 @@ void list_messages_from_topic(whiteboard* w, char* buf, int topic_index, int use
 // -2 username requrements not satisfied
 // -3 password requrements not satisfied
 // -4 user with same username found
+// else the index of the created user
 int create_user(user* ul, char* username, char* password);
 
 //delete user (only admin)
@@ -142,3 +145,41 @@ int initsem (key_t semkey);
 int Pwait (int semid);
 int Vpost (int semid);
 void semclean(key_t semkey);
+
+
+/*
+//TEST FOR MAX TOPIC NUM
+	for (i=0; i<2048; i++) {
+		r= add_topic(w->topics, "test\0", 0);
+		if (r == -1) {
+			printf("limit -> %d\n", i);
+		}
+		else {
+			printf("Created topic -> %d\n", i);
+		}
+	}
+
+	//TEST FOR MAX MESSAGES NUM
+	for (i=0; i<2048; i++) {
+		r= add_message_to_topic(w, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\0", 0, 1, 0);
+		if (r == -1) {
+			printf("limit messages reached -> %d\n", i);
+		}
+		else {
+			printf("Created message -> %d\n", i);
+		}
+	}
+
+	//TEST FOR USERS LIMIT
+	for (i=0; i<2048; i++) {
+		char s[3] = {};
+		sprintf(s, "%d", i);
+		r= create_user(w->users, s, "test");
+		if (r == -1) {
+			printf("limit users reached -> %d\n", i);
+		}
+		else {
+			printf("Created user -> %d\n", i);
+		}
+	}
+*/
