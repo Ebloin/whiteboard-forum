@@ -20,13 +20,13 @@ int main(int argc, char const *argv[]) {
 	char buf[BUF_SIZE] = {0};
 	char sendbuf[BUF_SIZE] = {0};
 	
-	// CREATE SOCKET CONNECTION
+	// Creating socket file descriptor 
 	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) { 
 		perror("socket failed"); 
 		exit(EXIT_FAILURE); 
-	}
-	//(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)))
-	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR , &opt, sizeof(opt))) { 
+	} 	
+	// Forcefully attaching socket to the port 8080 
+	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) { 
 		perror("setsockopt"); 
 		exit(EXIT_FAILURE); 
 	} 
@@ -43,11 +43,13 @@ int main(int argc, char const *argv[]) {
 		perror("listen"); 
 		exit(EXIT_FAILURE); 
 	}
-	printf(BACK_RED"Server listening on port 8000"RESET"\n");
 
 	//INIZIALIZE SHARED MEMORY
+	//creo la chiave
 	key_t key = ftok("shmfile",65); 
+	//Creo la shared memory (key, size, perm)
 	int shmid = shmget(key,sizeof(whiteboard),0666|IPC_CREAT); 
+	//Mi attacco alla shared memory
 	whiteboard* w = (whiteboard*) shmat(shmid,(void*)0,0);
 	memset(w,0,sizeof(whiteboard));
 	create_user(w->users, "admin", "admin");
@@ -55,9 +57,48 @@ int main(int argc, char const *argv[]) {
 	add_topic(w->topics, "WHITEBOARD RULES\0", 0);
 	subscribe_to_topic(w, 1, 1);
 	add_message_to_topic(w, "Welcome to whiteboard forum\0", 0, 1, 0);
+	/*
+	UNCOMMENT AND RECOMPILE TO PERFORM TEST
+
+	int i =0, r=0;
+	TEST FOR MAX TOPIC NUM
+	for (i=0; i<2048; i++) {
+		r= add_topic(w->topics, "test\0", 0);
+		if (r == -1) {
+			printf("limit -> %d\n", i);
+		}
+		else {
+			printf("Created topic -> %d\n", i);
+		}
+	}
+
+	TEST FOR MAX MESSAGES NUM
+	for (i=0; i<2048; i++) {
+		r= add_message_to_topic(w, "Welcome to whiteboard forum\0", 0, 1, 0);
+		if (r == -1) {
+			printf("limit messages reached -> %d\n", i);
+		}
+		else {
+			printf("Created message -> %d\n", i);
+		}
+	}
+
+	TEST FOR USERS LIMIT
+	for (i=0; i<2048; i++) {
+		char s[3] = {};
+		sprintf(s, "%d", i);
+		r= create_user(w->users, s, "test");
+		if (r == -1) {
+			printf("limit users reached -> %d\n", i);
+		}
+		else {
+			printf("Created user -> %d\n", i);
+		}
+	}
+	*/
 	shmdt(w);
 
-	//SEMAPHORES
+	//Semafori
 	key_t semkey = IPC_PRIVATE;
 	int mutex;
 	semclean(semkey);
@@ -73,18 +114,20 @@ int main(int argc, char const *argv[]) {
             exit(EXIT_FAILURE); 
         }
         else {
+            //Creo processo
             newchild = fork();
             if (newchild == 0) {
+				//New client da gestire	
 				int PID = getpid(), command, alive=1;
 				whiteboard* w = (whiteboard*) shmat(shmid,(void*)0,0);
 				int AUTH = -1; char* cmd;
 
-				//AUTHENTICATION
+				//TODO
 				while (AUTH == -1) {
 					char username[BUF_SIZE] = {0};
 					char password[BUF_SIZE] = {0};
 					send_cust(LOGIN_REQUSR, new_socket);
-					printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s\n", PID, "Username request");
+					printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s\n", PID, "Richiesta username");
 					fflush(stdout);
 					memset(username, 0, sizeof(username));		
 					read( new_socket , username, BUF_SIZE);
@@ -92,7 +135,7 @@ int main(int argc, char const *argv[]) {
 					fflush(stdout);
 					send_cust(ACK, new_socket);
 					send_cust(LOGIN_REQPASS, new_socket);
-					printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s\n", PID, "Password request");
+					printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s\n", PID, "Richiesta password");
 					memset(password, 0, sizeof(password));		
 					read( new_socket , password, BUF_SIZE);
 					printf(BOLD_YELLOW"[S <-- %d] CLIENT:"RESET" Password for login received -> %s\n", PID,password);
@@ -100,28 +143,28 @@ int main(int argc, char const *argv[]) {
 					AUTH = login(w->users, username, password);
 					if (AUTH == -1) {
 						send_cust(LOGIN_FAILED, new_socket);
-						printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, "Not logged in\n");
+						printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, "Login non effettuato\n");
 						fflush(stdout);
 					}
 				}
 
-				//LOGIN SUCCESS -> SEND BANNER
 				send_cust(LOGIN_SUCC, new_socket);
-				printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, "Logged in\n");
-				fflush(stdout);				
-				send_cust(BANNER3, new_socket);
+				printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, "Login effettuato\n");
+				fflush(stdout);
+				
+				send_cust(BANNER, new_socket);
 				printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, "Banner sent to client\n");
 				memset(buffer, 0, sizeof(buffer));		
 				read( new_socket , buffer, BUF_SIZE);
 				send_cust(ACK, new_socket);
 
 				while(alive) {
-					//ADMIN
+					//admin
 					if (AUTH == 0) {
 						send_cust(COMMANDS_LIST_ADM, new_socket);
 						printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, "Command list sent\n");
 					}
-					//NO_ADMIN
+					//no admin
 					else {
 						send_cust(COMMANDS_LIST, new_socket);
 						printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, "Command list sent\n");
@@ -149,6 +192,7 @@ int main(int argc, char const *argv[]) {
 						send_cust(ADDT_COMMANDS, new_socket);
 						printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s\n", PID, ADDT_COMMANDS);
 						fflush(stdout);
+						//leggo il nome del topic
 						memset(buffer, 0, sizeof(buffer));		
 						read( new_socket , buffer, BUF_SIZE);
 						printf(BOLD_YELLOW"[S <-- %d] CLIENT:"RESET" Topicname to add received -> %s\n", PID,buffer );
@@ -156,7 +200,7 @@ int main(int argc, char const *argv[]) {
 						Pwait(mutex);
 						res = add_topic(w->topics, buffer, AUTH);
 						Vpost(mutex);
-						//error cases
+						//error
 						if (res == -1) {
 							send_cust(ADDT_ERROR, new_socket);
 							printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, ADDT_ERROR);
@@ -227,11 +271,14 @@ int main(int argc, char const *argv[]) {
 							send_cust(DELUSR_INS_USR, new_socket);
 							printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s\n", PID, DELUSR_INS_USR);
 							fflush(stdout);
+							//leggo il nome del topic
 							memset(buffer, 0, sizeof(buffer));		
 							read( new_socket , buffer, BUF_SIZE);
 							printf(BOLD_YELLOW"[S <-- %d] CLIENT:"RESET" User to delete received -> %s\n", PID,buffer );
 							fflush(stdout);
 							int u=atoi(buffer);
+							//delete
+							//add_topic(w->topics, buffer);
 							Pwait(mutex);
 							res= delete_user(w, u);
 							Vpost(mutex);
@@ -286,13 +333,15 @@ int main(int argc, char const *argv[]) {
 						fflush(stdout);
 						memset(buffer, 0, sizeof(buffer));
 						read( new_socket , buffer, BUF_SIZE);
-						int topicindex;
+						int topicindex;// = atoi(buffer);
 						get_topic_index(&topicindex, buffer);
+						//printf("DEBUG: topic index->%d\n", topicindex);
 						memset(buf, 0, sizeof(buf));
 						Pwait(mutex);
 						list_messages_from_topic(w, buf, topicindex, AUTH);
 						Vpost(mutex);
 						send_cust(buf, new_socket);
+						//send(new_socket , buf , BUF_SIZE, 0); 
 						printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, "Topic's messages listed\n");
 						fflush(stdout);
 					}
@@ -305,25 +354,35 @@ int main(int argc, char const *argv[]) {
 							fflush(stdout);
 						}
 						else {	
+							//Send ack and send new istructions
+							//get username
 							send_cust(ACK, new_socket);
+							//send(new_socket , ACK , BUF_SIZE, 0);
 							char username[BUF_SIZE] = {0};
 							char password[BUF_SIZE] = {0};
 							send_cust(ADDU_INSUSR, new_socket);
+							//send(new_socket , ADDU_INSUSR , BUF_SIZE, 0); 
 							printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s\n", PID, ADDU_INSUSR);
 							fflush(stdout);
 							read( new_socket , username, BUF_SIZE);
 							printf(BOLD_YELLOW"[S <-- %d] CLIENT:"RESET" Username to add received -> %s\n", PID,username);
+							//get password
 							send_cust(ACK, new_socket);
+							//send(new_socket , ACK , BUF_SIZE, 0);
 							send_cust(ADDU_INSPWD, new_socket);
+							//send(new_socket , ADDU_INSPWD , BUF_SIZE, 0); 
 							printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s\n", PID, ADDU_INSPWD);
 							fflush(stdout);
 							read( new_socket , password, BUF_SIZE);
 							printf(BOLD_YELLOW"[S <-- %d] CLIENT:"RESET" Password to add received -> %s\n", PID,password);
 							fflush(stdout);
 							int res;
+							//BUG
+							//printf("%s %s nuovoutente\n", username, password);
 							Pwait(mutex);
 							res = create_user(w->users, username, password);
 							Vpost(mutex);
+							//list_topics(w->topics);
 
 							if (res==-2) {
 								send_cust(ADDU_ERR_USR, new_socket);
@@ -370,7 +429,8 @@ int main(int argc, char const *argv[]) {
 							list_users(w->users, buf);
 							Vpost(mutex);
 							send_cust(buf, new_socket);
-							printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, "Users list sent\n");
+							//send(new_socket , buf , BUF_SIZE, 0); 
+							printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, "Lista dei utenti inviata\n");
 							fflush(stdout);
 						}
 					}
@@ -379,17 +439,24 @@ int main(int argc, char const *argv[]) {
 					else if (strncmp(cmd, "create thread", strlen("create thread"))==0) {
 						int res;
 						send_cust(ACK, new_socket);
+						//send(new_socket , ACK , BUF_SIZE, 0);
 						send_cust(ADDM_SELECT_TOPIC, new_socket);
+						//send(new_socket , ADDM_SELECT_TOPIC , BUF_SIZE, 0); 
 						printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s\n", PID, ADDM_SELECT_TOPIC);
 						fflush(stdout);
 						memset(buffer, 0, sizeof(buffer));		
 						read( new_socket , buffer, BUF_SIZE);
 						int topicindex;
+						//topicindex = atoi(buffer);
 						get_topic_index(&topicindex, buffer);
+						//printf("%d\n", topicindex);
 						printf(BOLD_YELLOW"[S <-- %d] CLIENT:"RESET" Topic selected to add message -> %s\n", PID,buffer );
 						fflush(stdout);
 						send_cust(ACK, new_socket);
+						//send(new_socket , ACK , BUF_SIZE, 0);
+						//Richiedi testo messaggio
 						send_cust(ADDM_MESSAGE_TEXT, new_socket);
+						//send(new_socket , ADDM_MESSAGE_TEXT , BUF_SIZE, 0); 
 						printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s\n", PID, ADDM_MESSAGE_TEXT);
 						fflush(stdout);
 						memset(buffer, 0, sizeof(buffer));		
@@ -436,10 +503,14 @@ int main(int argc, char const *argv[]) {
 						read(new_socket , buffer, BUF_SIZE);
 						int msgindex, topicindex;
 						get_indexes_from_id(&topicindex, &msgindex, buffer);
+						//printf("%d\n", msgindex);
 						printf(BOLD_YELLOW"[S <-- %d] CLIENT:"RESET" Message to reply selected -> %s\n", PID,buffer );
 						fflush(stdout);
 						send_cust(ACK, new_socket);
+						//send(new_socket , ACK , BUF_SIZE, 0);
+						//Richiedi testo messaggio
 						send_cust(REPLY_TEXT, new_socket);
+						//send(new_socket , ADDM_MESSAGE_TEXT , BUF_SIZE, 0); 
 						printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s\n", PID, "Text of the reply requested");
 						fflush(stdout);
 						memset(buffer, 0, sizeof(buffer));		
@@ -475,14 +546,17 @@ int main(int argc, char const *argv[]) {
 						send_cust(TOPSUB_NAME, new_socket);
 						printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s\n", PID, ADDT_COMMANDS);
 						fflush(stdout);
+						//leggo il nome del topic
 						memset(buffer, 0, sizeof(buffer));		
 						read( new_socket , buffer, BUF_SIZE);
 						printf(BOLD_YELLOW"[S <-- %d] CLIENT:"RESET" Topic code to subscribe received -> %s\n", PID,buffer );
 						fflush(stdout);
 						int topic_index = atoi(buffer);
+						//res = add_topic(w->topics, buffer, AUTH);
 						Pwait(mutex);
 						res = subscribe_to_topic(w, topic_index, AUTH);
 						Vpost(mutex);
+						//error
 						if (res == -1) {
 							send_cust(TOPSUB_FAIL_NOEXT, new_socket);
 							printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, TOPSUB_FAIL_NOEXT);
@@ -495,6 +569,7 @@ int main(int argc, char const *argv[]) {
 							fflush(stdout);
 						}	
 
+						//success						
 						else {
 							send_cust(TOPSUB_SUCC, new_socket);
 							printf(BOLD_GREEN"[S --> %d] SERVER:"RESET" %s", PID, TOPSUB_SUCC);
@@ -513,6 +588,7 @@ int main(int argc, char const *argv[]) {
 						read( new_socket , buffer, BUF_SIZE);
 						int topicindex, msgindex;
 						get_indexes_from_id(&topicindex, &msgindex, buffer);
+						//printf("%d\n", topicindex);
 						printf(BOLD_YELLOW"[S <-- %d] CLIENT:"RESET" Message code sent from client -> %s\n", PID,buffer );
 						fflush(stdout);
 						memset(buf, 0, sizeof(buf));
@@ -531,14 +607,16 @@ int main(int argc, char const *argv[]) {
 						fflush(stdout);
 					}
 				}
+				//endtest
 				close(new_socket);
 				printf(BOLD_RED"Connection close with client %d\n"RESET"", PID);
+				//stacclo la shm
 				shmdt(w);
                 return 0;
             }
 
             else {
-                //MAIN PROCESS
+                //sono il padre
                 printf(BOLD_RED"New process handler started with PID: %d\n"RESET"", newchild);
                 fflush(stdout);
             }

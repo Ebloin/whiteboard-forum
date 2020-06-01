@@ -55,7 +55,7 @@ int check_visualized(message* m);
 
 //Recoursive function that prints a message replies indented of one tab
 //Function modify the parameter buf with side effect
-void print_replies(message* ml, message* m, char* buf, int topic_index, int level, int userindex);
+void print_replies(message* ml, message* m, char* buf, int topic_index, int level, int userindex, whiteboard* w);
 
 //Check if a user is subscripted to a topic
 //- 1: subscripted
@@ -96,9 +96,10 @@ int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_in
 void list_messages_from_topic(whiteboard* w, char* buf, int topic_index, int userindex);
 
 //Create a new user (Reserved to the administrator)
-// -1 other user with same username
+// -1 user limit reached
 // -2 username requrements not satisfied
 // -3 password requrements not satisfied
+// -4 user with same username found
 int create_user(user* ul, char* username, char* password);
 
 //delete user (only admin)

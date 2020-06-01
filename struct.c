@@ -1,4 +1,20 @@
 #include "struct.h"
+#define RED "\033[0;31m"    
+#define BOLD_RED "\033[1;31m"	
+#define GREEN "\033[0;32m"	
+#define BOLD_GREEN  "\033[1;32m"	
+#define YELLOW "\033[0;33m"	
+#define BOLD_YELLOW "\033[1;33m"	
+#define BLUE "\033[0;34m"	
+#define BOLD_BLUE "\033[1;34m"	
+#define MAGENTA "\033[0;35m"	
+#define BOLD_MAGENTA "\033[1;35m"	
+#define CYAN "\033[0;36m"	
+#define BOLD_CYAN "\033[1;36m"	
+#define RESET "\033[0m"   	
+#define BACK_GREEN "\033[1;42m"
+#define BACK_RED "\033[1;41m"
+#define BACK_BLUE "\033[1;44m"
 
 int check_utente_exists(whiteboard* w, int userindex) {
 	if (strcmp(w->users[userindex].username, "")==0) {
@@ -19,7 +35,7 @@ int check_visualized(message* m) {
 	return 1;
 }
 
-void print_replies(message* ml, message* m, char* buf, int topic_index, int level, int userindex) {
+void print_replies(message* ml, message* m, char* buf, int topic_index, int level, int userindex, whiteboard* w) {
 	int i=0,l=0;
 	char tmp[BUF_SIZE+100]={0};
 	message* current;
@@ -31,7 +47,7 @@ void print_replies(message* ml, message* m, char* buf, int topic_index, int leve
 				strcat(buf, "\t");
 			}
 			memset(tmp, 0, sizeof(tmp));
-			sprintf(tmp, "\033[1;34m[#%s]\033[0m %s\n", current->id, current->text);
+			sprintf(tmp, BOLD_BLUE"[#%s - %s]" RESET " %s\n", current->id, w->users[current->sender].username, current->text);
 			strcat(buf, tmp);
 			if (current->visualized == 0) {
 				//se l'utente deve visualizzare
@@ -43,7 +59,7 @@ void print_replies(message* ml, message* m, char* buf, int topic_index, int leve
 			}
 
 			if (current->replies[0] != 0) {
-				print_replies(ml, current, buf, topic_index, level+1, userindex);
+				print_replies(ml, current, buf, topic_index, level+1, userindex, w);
 			}
 		}
 	}
@@ -70,7 +86,7 @@ int add_topic(topic* tl, char* name, int user_creator) {
 	}
 	int i =0;
 	topic* current;
-	for (i; i<NUM_TOPIC; i++) {
+	for (i; i<=NUM_TOPIC; i++) {
 		if (i == NUM_TOPIC) {
 			//printf("Topic limit reached\n");
 			return -1;
@@ -109,7 +125,7 @@ int delete_topic(topic* tl, char* id, int requester) {
 }
 
 void list_topics(topic* tl, char* buf) {
-	strcpy(buf, "List of all the availables topics:\n");
+	strcpy(buf, BACK_BLUE"AVAILABLE TOPICS:                                                 \n"RESET);
 	char tmp[BUF_SIZE]={0};
 	int i=0;
 	topic* current;
@@ -121,7 +137,7 @@ void list_topics(topic* tl, char* buf) {
 		}
 		current = &tl[i];
 		if (strcmp(current->name, "")!=0) {
-			sprintf(tmp, "[%s] %s\n", current->id, current->name);
+			sprintf(tmp, BOLD_BLUE"[%s] %s\n"RESET, current->id, current->name);
 			strcat(buf, tmp);
 		}	
 	}
@@ -129,7 +145,7 @@ void list_topics(topic* tl, char* buf) {
 }
 
 void list_subscripted_topics(whiteboard* w, topic* tl, int userindex, char* buf) {
-	strcpy(buf, "List of the topics where the user is subscripted:\n");
+	strcpy(buf, BACK_BLUE"SUBSCRIPTED TOPICS:                                                 \n"RESET);
 	char tmp[BUF_SIZE]={0};
 	user* u = &w->users[userindex];
 	//printf("DEBUG: current_user=%04d\n", userindex);
@@ -148,7 +164,7 @@ void list_subscripted_topics(whiteboard* w, topic* tl, int userindex, char* buf)
 		}
 	}
 	if (anysubscription == 0) {
-		strcat(buf, "User is not subscribed to any topic!\n");
+		strcat(buf, BOLD_RED"ERROR: User is not subscribed to any topic!\n"RESET);
 	}
 }
 
@@ -172,7 +188,7 @@ int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_in
 	}
 	message* current;
 	int i,l;
-	for (i=0; i<NUM_MESSAGES; i++) {
+	for (i=0; i<=NUM_MESSAGES; i++) {
 		if (i == NUM_MESSAGES) {
 			return -1;
 		}
@@ -220,23 +236,23 @@ int add_message_to_topic(whiteboard* w, char* text, int user_index, int topic_in
 
 void list_messages_from_topic(whiteboard* w, char* buf, int topic_index, int userindex) {
 	if (topic_index>=NUM_TOPIC) {
-		strcat(buf, "Selected topic doesn't exists!\n");
+		strcat(buf, BOLD_RED"ERROR: Selected topic doesn't exists!\n"RESET);
 		return;
 	}
 
 	else if (strcmp(w->topics[topic_index].name, "") ==0 || topic_index ==0 || topic_index>=NUM_TOPIC) {
-		strcat(buf, "Selected topic doesn't exists!\n");
+		strcat(buf, BOLD_RED"ERROR: Selected topic doesn't exists!\n"RESET);
 		return;
 	}
 
 	message* ml = w->topics[topic_index].messages;
 	if (!check_subscription(&w->topics[topic_index], userindex)) {
 		//Scrivi sul buf che non puoi leggere
-		strcat(buf, "You are not subscribed to the topic, subscribe to read messages!\n");
+		strcat(buf, BOLD_RED"ERROR: You are not subscribed to the topic, subscribe to read messages!\n"RESET);
 		return;
 	}
 
-	sprintf(buf, "Lista dei messaggi presenti sul topic [%d]%s\n", topic_index, w->topics[topic_index].name);
+	sprintf(buf, BACK_BLUE"[%04d] %s                                                 \n"RESET, topic_index, w->topics[topic_index].name);
 	message* current;
 	char tmp[BUF_SIZE+100]={0};
 	int i;
@@ -246,9 +262,8 @@ void list_messages_from_topic(whiteboard* w, char* buf, int topic_index, int use
 		}
 		current = &ml[i];
 		if (strcmp(current->text, "") != 0) {
-			//printf("DEBUG -> inreplyto= %d\n", current->in_reply_to);
 			if (current->in_reply_to == 0) {
-				sprintf(tmp, "\033[1;34m[#%s]\033[0m %s\n", current->id, current->text);
+				sprintf(tmp, BOLD_BLUE"[#%s - %s]" RESET " %s\n", current->id, w->users[current->sender].username, current->text);
 				strcat(buf, tmp);
 				//se non ho visualizzato, visualizza
 				if (current->visualized == 0) {
@@ -262,7 +277,7 @@ void list_messages_from_topic(whiteboard* w, char* buf, int topic_index, int use
 
 				//controllo se ci stanno replies
 				if (current->replies[0] != 0) {
-					print_replies(ml, current, buf, topic_index, 1, userindex);
+					print_replies(ml, current, buf, topic_index, 1, userindex, w);
 				}
 			}
 		}
@@ -282,14 +297,14 @@ int create_user(user* ul, char* username, char* password) {
 		return -3;
 	}
 
-	for (i; i<NUM_USERS; i++) {
+	for (i; i<=NUM_USERS; i++) {
 		if (i == NUM_USERS) {
 			//printf("Users limit reached\n");
 			return -1;
 		}
 		current = &ul[i];
 		if (strcmp(current->username, username) == 0) {
-			return -1;
+			return -4;
 		}
 		if (strcmp(current->username, "") == 0) {
 			break;
@@ -318,7 +333,7 @@ int delete_user(whiteboard* w, int u) {
 }
 
 void list_users(user* ul, char* buf) {
-	strcpy(buf, "Lista degli utenti presenti nella whiteboard:\n");
+	strcpy(buf, BACK_BLUE"USERS REGISTERED:                                                 \n"RESET);
 	char tmp[BUF_SIZE]={0};
 	int i=0;
 	user* current;
@@ -330,7 +345,7 @@ void list_users(user* ul, char* buf) {
 		}
 		current = &ul[i];
 		if (strcmp(current->username, "")!=0) {
-			sprintf(tmp, "%d)%s\n", i, current->username);
+			sprintf(tmp, BOLD_BLUE"%d) %s\n"RESET, i, current->username);
 			strcat(buf, tmp);
 		}	
 	}
@@ -404,39 +419,40 @@ void get_topic_index(int* topicindex, char* topic_id) {
 
 int print_status_message(whiteboard* w, int topic_index, int msg_index, char* buf, int requester) {
 	if (topic_index >= NUM_TOPIC || msg_index >= NUM_MESSAGES) {
-		strcat(buf, "Selected message doesn't exists");
+		strcat(buf, BOLD_RED"ERROR: Selected message doesn't exists\n"RESET);
 		return -1;
 	}
 	
 	message* m = &(w->topics[topic_index].messages[msg_index]);
 	if (strcmp(m->text, "")==0) {
-		strcat(buf, "Selected message doesn't exists");
+		strcat(buf,BOLD_RED "ERROR: Selected message doesn't exists\n"RESET);
 		return -1;
 	}
 	else if (m->sender != requester) {
-		strcat(buf, "Only the sender can see the status of a message\n");
+		strcat(buf, BOLD_RED"ERROR: Only the sender can see the status of a message\n"RESET);
 		return -1;
 	}
 	char tmp[BUF_SIZE]={0};
 	int i;
-	strcpy(buf, "List of the users that didn't visuaize the message:\n");
+	sprintf(tmp, BACK_BLUE"STATUS OF MESSAGE [#%04d%04d]:                             \n"RESET, topic_index, requester);
+	strcpy(buf, tmp);
+	strcat(buf, BOLD_BLUE"Message delivered:\n"RESET);
 	for (i=1; i<NUM_USERS; i++) {
 		if (check_utente_exists(w, i) && i != requester) {
 			if (m->visualizations[i] == 1) {
-				//printf("entro0\n");
-				sprintf(tmp, "\t\033[1;34m%s\n\033[0m", w->users[i].username);
+				sprintf(tmp, " -> %s\n", w->users[i].username);
 				strcat(buf, tmp);
 			}
 		}
 	}
 
-	sprintf(tmp, "List of the users that visualized the message:\n");
+	sprintf(tmp, BOLD_BLUE"Message read:\n"RESET);
 	strcat(buf, tmp);
 	for (i=1; i<NUM_USERS; i++) {
 		if (check_utente_exists(w, i) && i!= requester) {
 			if (m->visualizations[i] == 0) {
 				//printf("entro1\n");
-				sprintf(tmp, "\t\033[1;34m%s\n\033[0m", w->users[i].username);
+				sprintf(tmp, " -> %s\n", w->users[i].username);
 				strcat(buf, tmp);
 			}
 		}
@@ -447,13 +463,13 @@ int print_status_message(whiteboard* w, int topic_index, int msg_index, char* bu
 int initsem (key_t semkey)
 {
     int status = 0, semid;
-    union semun {		/* this has to be declared */
+    union semun {
       int val;
       struct semid_ds *stat;
     } ctl_arg;
 
     if ((semid = semget (semkey, 1, 0600 | IPC_CREAT)) > 0) {
-      ctl_arg.val = 1;	/* semctl should be called with */
+      ctl_arg.val = 1;
       status = semctl(semid, 0, SETVAL, ctl_arg);
     }
 
@@ -512,5 +528,5 @@ void semclean(key_t semkey){
     semctl(semid, 0, SETVAL, ctl_arg);
   }
 
-  semctl(semid, 0, IPC_RMID); // CLEANS existing semaphore 
+  semctl(semid, 0, IPC_RMID);
 }
